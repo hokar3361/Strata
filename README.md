@@ -1,5 +1,28 @@
 <h1 align="center">Strata</h1>
 
+> **このフォークの更新点(hokar3361/Strata)**:64 GB の Mac で IQ3_XXS をメモリに常駐させて動かせるようにした修正だけを、Strata v0.1.44(ed4773eb)に加えています。
+> 元の Strata の作者と貢献者に感謝します。同じ修正を上流に提案しています。
+>
+> **性能差**(Mac Studio M4 Max 64 GB、Qwen3.8-Flash-Next GSQ-RCO IQ3_XXS、思考なし、greedy、decode tok/s。bench は `bench-strata.py --lengths 1024,4096 --max-tokens 256 --repeat 3`、コード・物語は 400 トークン)
+>
+> | | bench 1K | bench 4K | コード | 物語 |
+> |---|---:|---:|---:|---:|
+> | v0.1.44 そのまま(64 GB ではエキスパートを SSD から読む・MTP なし) | 52.6 | 52.0 | 29.1 | 37.1 |
+> | この修正で常駐(MTP なし) | 59.7 | 59.0 | 58.1 | 58.3 |
+> | この修正で常駐+MTP(`--spec 2`) | **73.5** | **72.3** | **69.5** | **59.3** |
+>
+> 出力は 3 つとも同じ文面です(常駐と SSD 読み、MTP ありとなしでトークン一致)。
+>
+> **原理**:Metal の 1 つのバッファは `maxBufferLength`(M4 Max 64 GB で 41.75 GB)までしか作れません。v0.1.44 はモデルファイル(IQ3_XXS は 47.0 GB)を 1 つのバッファで包むため、
+> 64 GB の Mac では `mtl: wrap ... failed` となり、常駐できずに SSD 読み出しへ回っていました。この修正は、上限を超えるファイルを「最大の束縛範囲だけ重ねた」複数の no-copy バッファで包み、
+> 各カーネル引数をオフセットから該当するバッファに割り当てます(`metal/src/mtl_rt.mm`)。ルーティッドエキスパートのカーネルはファイル先頭からの絶対オフセットを使っていたため、
+> 層の最初のエキスパートテンソルで束縛して相対オフセットにしました(`window.cpp`・`prompt_chain.inc` の `moe_rebase`)。上限に収まるモデルでは従来と同じ 1 つのバッファで、動作は変わりません。
+>
+> **使い方**:`./setup.sh --model IQ3_XXS` のあと、MTP 下書き層を用意し(`tools/mtp_fetch.py fetch --out <dir>` → `tools/mtp_pack.py --src <dir> --experts q2_0 --out <dir>/mtp-q2_0.gguf`、`<dir>/rt` を作成)、
+> `strata-iq3_xxs.json` の `env` を `{"STRATA_METAL_STREAM": "0"}` に、`args` に `--mtp <dir>/rt` を加えます。自動判定(64 GB では SSD 読み出し)は変えていません。
+> 他のアプリが大量のメモリを使う状況での余裕は確かめていません。
+
+
 **English** · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [Español](README.es.md) · [Português](README.pt-BR.md)
 
 <p align="center"><b>Run a 125-billion-parameter AI model on your own gaming PC</b><br>
