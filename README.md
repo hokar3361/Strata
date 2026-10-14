@@ -2,6 +2,7 @@
 
 > **このフォークの更新点(hokar3361/Strata)**:64 GB の Mac で IQ3_XXS をメモリに常駐させて動かせるようにした修正だけを、Strata v0.1.44(ed4773eb)に加えています。
 > 元の Strata の作者と貢献者に感謝します。同じ修正を上流に提案しています。
+> **注意**:自己責任でお使いください(無保証)。常駐させると GPU・メモリへの負荷が高く、他のアプリを同時に大きく動かすとメモリが足りなくなるおそれがあります。この修正を確かめたのは M4 Max 64 GB の 1 台だけです。
 >
 > **性能差**(Mac Studio M4 Max 64 GB、Qwen3.8-Flash-Next GSQ-RCO IQ3_XXS、思考なし、greedy、decode tok/s。bench は `bench-strata.py --lengths 1024,4096 --max-tokens 256 --repeat 3`、コード・物語は 400 トークン)
 >
